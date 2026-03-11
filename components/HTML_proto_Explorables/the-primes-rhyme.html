@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Primes Rhyme</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,600;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #FDFAF4;
+    --paper-dark: #F3EEE4;
+    --ink: #1a1410;
+    --ink-light: #5a4e40;
+    --ink-faint: #c4b8a4;
+    --gold: #D4920F;
+    --gold-light: #F5C842;
+    --gold-bg: #FDF3D0;
+    --eliminated: #D4CBB8;
+    --elim-bg: #EDE8DF;
+    --prime-blue: #2563A8;
+    --prime-blue-bg: #DDEEFF;
+    --accent: #C44B1A;
+    --accent-light: #F0784A;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Lora', Georgia, serif;
+    font-size: 18px;
+    line-height: 1.7;
+  }
+
+  /* ── PROGRESS BAR ── */
+  #progress-bar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 3px;
+    background: var(--gold);
+    width: 0%;
+    transition: width 0.3s ease;
+    z-index: 100;
+  }
+
+  /* ── SECTIONS ── */
+  .section {
+    min-height: 100vh;
+    padding: 80px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .section:nth-child(odd) { background: var(--paper); }
+  .section:nth-child(even) { background: var(--paper-dark); }
+
+  .prose {
+    max-width: 640px;
+    width: 100%;
+  }
+
+  .prose p {
+    margin-bottom: 1.2em;
+    color: var(--ink);
+  }
+
+  .prose p.quiet {
+    color: var(--ink-light);
+    font-style: italic;
+    font-size: 0.92em;
+  }
+
+  h1 {
+    font-size: clamp(2.2rem, 5vw, 3.4rem);
+    font-weight: 600;
+    line-height: 1.15;
+    margin-bottom: 0.3em;
+    letter-spacing: -0.02em;
+  }
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 0.6em;
+    color: var(--ink);
+  }
+
+  .act-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 0.8em;
+    display: block;
+  }
+
+  .divider {
+    width: 48px;
+    height: 2px;
+    background: var(--gold);
+    margin: 28px 0;
+  }
+
+  /* ── CALLOUT ── */
+  .callout {
+    background: var(--gold-bg);
+    border-left: 3px solid var(--gold);
+    padding: 16px 20px;
+    border-radius: 0 6px 6px 0;
+    margin: 24px 0;
+    font-size: 0.95em;
+  }
+
+  .callout.blue {
+    background: var(--prime-blue-bg);
+    border-color: var(--prime-blue);
+  }
+
+  /* ── BUTTON ── */
+  .btn {
+    display: inline-block;
+    padding: 10px 24px;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.82rem;
+    letter-spacing: 0.08em;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    margin: 8px 4px;
+  }
+  .btn:hover { background: var(--gold); color: var(--ink); transform: translateY(-1px); }
+  .btn.outline {
+    background: transparent;
+    color: var(--ink);
+    border: 1.5px solid var(--ink-faint);
+  }
+  .btn.outline:hover { border-color: var(--gold); color: var(--gold); background: transparent; }
+
+  /* ── GRID STYLES ── */
+  .grid-container {
+    max-width: 700px;
+    width: 100%;
+    margin: 32px auto;
+  }
+
+  .grid-label-row {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 4px;
+    padding-left: 36px;
+  }
+
+  .col-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--ink-light);
+    width: 36px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .grid-row {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 4px;
+    align-items: center;
+  }
+
+  .row-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--ink-light);
+    width: 32px;
+    text-align: right;
+    padding-right: 4px;
+    flex-shrink: 0;
+  }
+
+  .cell {
+    width: 36px;
+    height: 36px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 500;
+    transition: all 0.4s ease;
+    position: relative;
+    flex-shrink: 0;
+    cursor: default;
+  }
+
+  .cell.plain {
+    background: var(--elim-bg);
+    color: var(--ink-faint);
+    border: 1px solid #E0D8CC;
+  }
+
+  .cell.eliminated {
+    background: var(--elim-bg);
+    color: var(--eliminated);
+    border: 1px solid #E0D8CC;
+    text-decoration: line-through;
+    text-decoration-color: var(--eliminated);
+  }
+
+  .cell.candidate {
+    background: var(--gold-bg);
+    color: var(--gold);
+    border: 1.5px solid var(--gold-light);
+    font-weight: 600;
+  }
+
+  .cell.prime {
+    background: var(--prime-blue-bg);
+    color: var(--prime-blue);
+    border: 2px solid var(--prime-blue);
+    font-weight: 700;
+  }
+
+  .cell.composite-candidate {
+    background: var(--gold-bg);
+    color: #B89040;
+    border: 1.5px solid #D4B870;
+    opacity: 0.7;
+  }
+
+  /* ── FOLD ANIMATION ── */
+  #fold-scene {
+    width: 100%;
+    max-width: 700px;
+    margin: 32px auto;
+    position: relative;
+  }
+
+  .fold-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 4px;
+  }
+
+  .fold-cell {
+    width: 44px;
+    height: 44px;
+    border-radius: 4px;
+    text-align: center;
+    vertical-align: middle;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 500;
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* ── PRIMORIAL SLIDER ── */
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 20px 0;
+    flex-wrap: wrap;
+  }
+
+  .slider-row label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--ink-light);
+  }
+
+  input[type=range] {
+    -webkit-appearance: none;
+    height: 4px;
+    background: var(--ink-faint);
+    border-radius: 2px;
+    outline: none;
+    flex: 1;
+    min-width: 120px;
+  }
+
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--gold);
+    cursor: pointer;
+    border: 2px solid var(--ink);
+  }
+
+  .slider-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--ink);
+    min-width: 80px;
+  }
+
+  /* ── STATS ROW ── */
+  .stats-row {
+    display: flex;
+    gap: 20px;
+    margin: 16px 0;
+    flex-wrap: wrap;
+  }
+
+  .stat-box {
+    background: var(--paper-dark);
+    border: 1px solid var(--ink-faint);
+    border-radius: 6px;
+    padding: 12px 18px;
+    text-align: center;
+    min-width: 120px;
+  }
+
+  .stat-number {
+    font-family: 'DM Mono', monospace;
+    font-size: 1.6rem;
+    font-weight: 500;
+    color: var(--gold);
+    display: block;
+  }
+
+  .stat-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-light);
+  }
+
+  /* ── CANVAS for fold ── */
+  #fold-canvas-wrap {
+    width: 100%;
+    max-width: 700px;
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+  }
+
+  canvas#fold-canvas {
+    display: block;
+    margin: 0 auto;
+    border-radius: 8px;
+  }
+
+  /* ── LEGEND ── */
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin: 16px 0;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.74rem;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--ink-light);
+  }
+
+  .legend-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+
+  /* ── FINAL SECTION ── */
+  .attribution {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 60px 24px;
+    text-align: center;
+  }
+
+  .attribution h2 { color: var(--gold-light); }
+  .attribution p { color: #c4b8a4; max-width: 560px; margin: 0 auto 1em; }
+  .attribution a { color: var(--gold-light); }
+
+  /* ── SCROLL REVEAL ── */
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* ── HERO ── */
+  #hero {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 24px;
+    background: var(--paper);
+    position: relative;
+    overflow: hidden;
+  }
+
+  #hero::before {
+    content: '';
+    position: absolute;
+    top: -200px; right: -200px;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(212,146,15,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-inner {
+    max-width: 640px;
+    width: 100%;
+    position: relative;
+  }
+
+  .hero-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 1.2em;
+    display: block;
+  }
+
+  .hero-sub {
+    font-size: 1.1rem;
+    color: var(--ink-light);
+    font-style: italic;
+    margin-top: 1em;
+  }
+
+  .scroll-hint {
+    position: absolute;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    color: var(--ink-faint);
+    animation: bounce 2s ease-in-out infinite;
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(6px); }
+  }
+
+  /* mobile */
+  @media (max-width: 600px) {
+    .cell { width: 28px; height: 28px; font-size: 0.6rem; }
+    .col-label { width: 28px; font-size: 0.6rem; }
+    .stats-row { gap: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-inner">
+    <span class="hero-tag">An Explorable Essay</span>
+    <h1>The Primes<br>Rhyme</h1>
+    <div class="divider"></div>
+    <p class="hero-sub">Why prime numbers aren't random — and how folding a table makes their hidden order visible.</p>
+    <p style="color:var(--ink-light); font-size:0.88em; margin-top:1.4em;">
+      Based on the visual concept of <strong>Mohammed Kamel Ali Albaba</strong> &nbsp;·&nbsp; 
+      <a href="https://zenodo.org/records/18049425" style="color:var(--gold); text-decoration:none;" target="_blank">Zenodo preprint ↗</a>
+    </p>
+  </div>
+  <div class="scroll-hint">scroll ↓</div>
+</section>
+
+<!-- ACT I: THE GRID -->
+<section class="section" id="act1">
+  <div class="prose reveal">
+    <span class="act-label">Act I</span>
+    <h2>A table with a secret</h2>
+    <p>Write the integers 1 through 36 in a table with 6 columns. Just a simple grid.</p>
+    <p>Now ask: which of these numbers can possibly be prime? A prime has no divisors except 1 and itself. So anything divisible by 2 or 3 is immediately out.</p>
+  </div>
+
+  <div class="grid-container reveal" id="grid-act1">
+    <!-- built by JS -->
+  </div>
+
+  <div class="prose reveal">
+    <div class="legend" id="legend-act1">
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--elim-bg); border:1px solid #E0D8CC;"></div>eliminated</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--gold-bg); border:1.5px solid var(--gold-light);"></div>prime candidate</div>
+    </div>
+    <div style="margin:8px 0 16px;">
+      <button class="btn" onclick="animateAct1()">Show me</button>
+      <button class="btn outline" onclick="resetAct1()">Reset</button>
+    </div>
+    <p class="quiet">Every number divisible by 2 sits in columns 2, 4, 6. Every multiple of 3 sits in column 3. What's left can only be in columns 1 and 5.</p>
+    <div class="callout">
+      <strong>The observation:</strong> In a mod-6 table, prime candidates cluster exclusively in columns 1 and 5. Not randomly scattered — geometrically constrained.
+    </div>
+  </div>
+</section>
+
+<!-- ACT II: THE FOLD -->
+<section class="section" id="act2">
+  <div class="prose reveal">
+    <span class="act-label">Act II</span>
+    <h2>Now fold it</h2>
+    <p>Here's Mohammed's key insight. The table has a line of symmetry — down the middle, between columns 3 and 4. If you fold the right half over the left, something remarkable happens.</p>
+    <p>The two gold columns — columns 1 and 5 — land <em>exactly on top of each other</em>.</p>
+  </div>
+
+  <div id="fold-canvas-wrap" class="reveal">
+    <canvas id="fold-canvas" width="660" height="320"></canvas>
+  </div>
+
+  <div class="prose reveal" style="margin-top:24px;">
+    <div style="margin: 12px 0 20px;">
+      <button class="btn" onclick="animateFold()">Fold it →</button>
+      <button class="btn outline" onclick="resetFold()">Unfold</button>
+    </div>
+    <p class="quiet">This isn't coincidence. Column 5 is the same as column −1 in mod-6. When you fold at the center, column 5 maps to column 1. The gold cells merge because they're the <em>same residue class</em>, mirrored.</p>
+    <div class="callout">
+      <strong>The symmetry:</strong> The prime candidates in mod-6 come in pairs (1, 5) that are mirror images. Folding makes this literally visible — two columns become one.
+    </div>
+  </div>
+</section>
+
+<!-- ACT II-B: SCALE UP -->
+<section class="section" id="act2b">
+  <div class="prose reveal">
+    <span class="act-label">Act II — continued</span>
+    <h2>What if we sieve more?</h2>
+    <p>Mod 6 uses the primes 2 and 3. What if we also eliminate multiples of 5? Then of 7? The table grows, but the same folding logic applies — and each time, the gold columns collapse perfectly.</p>
+  </div>
+
+  <div class="grid-container reveal">
+    <div class="slider-row">
+      <label>Primorial level:</label>
+      <input type="range" min="0" max="3" step="1" value="0" id="primorial-slider" oninput="updatePrimorial(this.value)">
+      <span class="slider-value" id="primorial-label">mod 6 (2×3)</span>
+    </div>
+
+    <div class="stats-row" id="primorial-stats">
+      <div class="stat-box">
+        <span class="stat-number" id="stat-modulus">6</span>
+        <span class="stat-label">Modulus</span>
+      </div>
+      <div class="stat-box">
+        <span class="stat-number" id="stat-candidates">2</span>
+        <span class="stat-label">Candidates / row</span>
+      </div>
+      <div class="stat-box">
+        <span class="stat-number" id="stat-folded">1</span>
+        <span class="stat-label">After folding</span>
+      </div>
+      <div class="stat-box">
+        <span class="stat-number" id="stat-density">33%</span>
+        <span class="stat-label">Density</span>
+      </div>
+    </div>
+
+    <div id="primorial-grid-wrap">
+      <!-- JS builds this -->
+    </div>
+
+    <div class="callout" id="primorial-caption">
+      Mod 6 = 2×3. Two prime candidates per row, folding into 1 column.
+    </div>
+  </div>
+
+  <div class="prose reveal" style="margin-top:8px;">
+    <p class="quiet">Each time you multiply the modulus by the next prime, the prime candidates thin out — but they never stop having this folding symmetry. The "rhyme" persists at every scale.</p>
+  </div>
+</section>
+
+<!-- ACT III: PRIME LAYERING -->
+<section class="section" id="act3">
+  <div class="prose reveal">
+    <span class="act-label">Act III</span>
+    <h2>Where primes actually land</h2>
+    <p>Now let's drop the actual primes onto the mod-6 table. Every prime greater than 3 must live in a gold column — but do all gold cells contain primes?</p>
+  </div>
+
+  <div class="grid-container reveal" id="grid-act3">
+    <!-- JS builds this -->
+  </div>
+
+  <div class="prose reveal">
+    <div style="margin: 8px 0 16px;">
+      <button class="btn" onclick="showPrimesAct3(false)">Show candidates only</button>
+      <button class="btn" onclick="showPrimesAct3(true)">Layer in primes</button>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--elim-bg);border:1px solid #E0D8CC;"></div>eliminated</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--gold-bg);border:1.5px solid #D4B870;"></div>candidate (composite)</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:var(--prime-blue-bg);border:2px solid var(--prime-blue);"></div>prime</div>
+    </div>
+
+    <div class="callout blue" style="margin-top:20px;">
+      <strong>The distinction that matters:</strong> Every prime > 3 lives in a gold column. But most gold cells are <em>composite</em>. The table tells you <em>where primes can be</em>. It doesn't tell you <em>which candidates are prime</em>. Those are two different questions.
+    </div>
+
+    <p style="margin-top: 1.2em;">This is the honest boundary of the structural rhyme. The sieve constrains the territory. It doesn't fully determine the inhabitants.</p>
+  </div>
+</section>
+
+<!-- CODA -->
+<section class="section" id="coda">
+  <div class="prose reveal">
+    <span class="act-label">What this means</span>
+    <h2>The rhyme is real</h2>
+    <p>What Mohammed's tables reveal is genuine: primes are not sprinkled randomly across the integers. They are <em>structurally constrained</em> — forced into specific columns at every primorial level, and those columns have a perfect folding symmetry that makes the constraint literally visible.</p>
+    <p>This is connected to deep mathematics: the <em>wheel factorization</em>, the Chinese Remainder Theorem, Euler's totient function. The symmetry under folding is not an observation — it's a theorem. <strong>It can be proved.</strong></p>
+
+    <div class="callout" style="margin: 24px 0;">
+      <strong>The formula:</strong> At primorial level p# (product of primes up to p), there are φ(p#) prime candidates per cycle, where φ is Euler's totient. They come in mirror pairs, so after folding: φ(p#) / 2 distinct columns. For mod 6: φ(6)/2 = 1. For mod 30: φ(30)/2 = 4. For mod 210: φ(210)/2 = 24.
+    </div>
+
+    <p>Mohammed's paper goes further — proposing that this structure resolves several major open problems in number theory. Those claims await peer review. But the visual phenomenon he identified is beautiful, true, and underexplored as a teaching tool.</p>
+    <p class="quiet">The fold animation you just played with is, to my knowledge, the first interactive version of this idea. Mohammed envisioned it as physical transparent layers — sheets of paper folding over each other. That image is exactly right.</p>
+  </div>
+</section>
+
+<!-- ATTRIBUTION -->
+<footer class="attribution">
+  <h2 style="margin-bottom:0.5em;">About this explorable</h2>
+  <div class="divider" style="margin:16px auto; background:var(--gold-light);"></div>
+  <p>The visual concept and mathematical structure come from <strong>Mohammed Kamel Ali Albaba</strong>, an independent researcher based in Gaza, whose paper introduced the idea of transparent folding maps for prime tables.</p>
+  <p>
+    <a href="https://zenodo.org/records/18049425" target="_blank">Read the full paper on Zenodo ↗</a>
+    &nbsp;·&nbsp;
+    Published December 2025
+  </p>
+  <p style="margin-top:1.6em; font-size:0.82em; color:#8a7e6e;">
+    Interactive explorable built with HTML + Canvas. No frameworks. 
+    Part of an ongoing project on visual mathematical reasoning.
+  </p>
+</footer>
+
+<script>
+// ── PRIMES ──
+function isPrime(n) {
+  if (n < 2) return false;
+  if (n === 2 || n === 3) return true;
+  if (n % 2 === 0 || n % 3 === 0) return false;
+  for (let i = 5; i * i <= n; i += 6) {
+    if (n % i === 0 || n % (i + 2) === 0) return false;
+  }
+  return true;
+}
+
+function isCandidateMod6(n) {
+  return n % 6 === 1 || n % 6 === 5;
+}
+
+// ── PROGRESS BAR ──
+window.addEventListener('scroll', () => {
+  const docH = document.documentElement.scrollHeight - window.innerHeight;
+  const pct = (window.scrollY / docH) * 100;
+  document.getElementById('progress-bar').style.width = pct + '%';
+});
+
+// ── REVEAL ON SCROLL ──
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) { e.target.classList.add('visible'); }
+  });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// ══════════════════════════════════
+// ACT I — THE GRID
+// ══════════════════════════════════
+const COLS = 6;
+const ROWS = 6;
+let act1State = 'plain'; // plain | eliminated | candidates
+
+function buildAct1Grid(state) {
+  const wrap = document.getElementById('grid-act1');
+  wrap.innerHTML = '';
+  wrap.style.maxWidth = '340px';
+
+  // col labels
+  const labelRow = document.createElement('div');
+  labelRow.className = 'grid-label-row';
+  for (let c = 1; c <= COLS; c++) {
+    const lbl = document.createElement('div');
+    lbl.className = 'col-label';
+    lbl.textContent = c;
+    labelRow.appendChild(lbl);
+  }
+  wrap.appendChild(labelRow);
+
+  for (let r = 0; r < ROWS; r++) {
+    const row = document.createElement('div');
+    row.className = 'grid-row';
+    const rl = document.createElement('div');
+    rl.className = 'row-label';
+    rl.textContent = r === 0 ? '' : `r${r}`;
+    row.appendChild(rl);
+
+    for (let c = 1; c <= COLS; c++) {
+      const n = r * COLS + c;
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.id = `a1-${n}`;
+      cell.textContent = n;
+
+      if (state === 'plain') {
+        cell.classList.add('plain');
+      } else if (state === 'eliminated') {
+        if (n % 2 === 0 || n % 3 === 0) {
+          cell.classList.add('eliminated');
+        } else {
+          cell.classList.add('candidate');
+        }
+      } else {
+        cell.classList.add('plain'); // fallback
+      }
+      row.appendChild(cell);
+    }
+    wrap.appendChild(row);
+  }
+}
+
+let act1Timeout = null;
+function animateAct1() {
+  if (act1Timeout) clearTimeout(act1Timeout);
+  buildAct1Grid('plain');
+  const total = ROWS * COLS;
+  let i = 1;
+  function step() {
+    if (i > total) return;
+    const n = i;
+    const cell = document.getElementById(`a1-${n}`);
+    if (cell) {
+      cell.classList.remove('plain');
+      if (n % 2 === 0 || n % 3 === 0) {
+        cell.classList.add('eliminated');
+      } else {
+        cell.classList.add('candidate');
+      }
+    }
+    i++;
+    act1Timeout = setTimeout(step, 40);
+  }
+  step();
+}
+
+function resetAct1() {
+  if (act1Timeout) clearTimeout(act1Timeout);
+  buildAct1Grid('plain');
+}
+
+buildAct1Grid('plain');
+
+// ══════════════════════════════════
+// ACT II — FOLD CANVAS
+// ══════════════════════════════════
+const canvas = document.getElementById('fold-canvas');
+const ctx = canvas.getContext('2d');
+
+// Responsive canvas
+function resizeCanvas() {
+  const wrap = document.getElementById('fold-canvas-wrap');
+  const w = Math.min(660, wrap.clientWidth - 16);
+  canvas.style.width = w + 'px';
+  canvas.style.height = (w * 320 / 660) + 'px';
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+const FOLD_COLS = 6;
+const FOLD_ROWS = 5;
+const FOLD_NUMS = Array.from({length: FOLD_ROWS * FOLD_COLS}, (_, i) => i + 1);
+
+const CELL_W = 80;
+const CELL_H = 48;
+const GAP = 6;
+const OFFSET_X = 30;
+const OFFSET_Y = 30;
+
+function cellColor(n, mode) {
+  // mode: 'full' = show all, 'candidates' = show eliminated vs candidate
+  const isElim = (n % 2 === 0 || n % 3 === 0);
+  if (isElim) return { bg: '#EDE8DF', text: '#C4B8A4', border: '#D8D0C4' };
+  // candidate
+  if (mode === 'merged') return { bg: '#FEF08A', text: '#92610A', border: '#F0B429' };
+  return { bg: '#FDF3D0', text: '#D4920F', border: '#F5C842' };
+}
+
+let foldProgress = 0;
+let foldRAF = null;
+
+function drawFold(progress) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.save();
+
+  const totalW = FOLD_COLS * (CELL_W + GAP) - GAP;
+  const foldX = OFFSET_X + 3 * (CELL_W + GAP) - GAP / 2; // between col 3 and 4
+
+  // Draw left half (cols 1-3): static
+  for (let r = 0; r < FOLD_ROWS; r++) {
+    for (let c = 0; c < 3; c++) {
+      const n = r * FOLD_COLS + c + 1;
+      const x = OFFSET_X + c * (CELL_W + GAP);
+      const y = OFFSET_Y + r * (CELL_H + GAP);
+      const colors = cellColor(n, 'normal');
+
+      ctx.fillStyle = colors.bg;
+      ctx.strokeStyle = colors.border;
+      ctx.lineWidth = 1.5;
+      roundRect(ctx, x, y, CELL_W, CELL_H, 5);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = colors.text;
+      ctx.font = `500 12px 'DM Mono', monospace`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(n, x + CELL_W / 2, y + CELL_H / 2);
+    }
+  }
+
+  // Draw right half (cols 4-6): fold animation
+  // At progress=0: cols at their normal position
+  // At progress=1: cols 4,5,6 mirror onto cols 3,2,1
+  for (let r = 0; r < FOLD_ROWS; r++) {
+    for (let c = 3; c < 6; c++) {
+      const n = r * FOLD_COLS + c + 1;
+      // Original position
+      const origX = OFFSET_X + c * (CELL_W + GAP);
+      const y = OFFSET_Y + r * (CELL_H + GAP);
+
+      // Mirror position: col 3 → col 2, col 4 → col 1, col 5 → col 0
+      // mirror col = (5 - c)
+      const mirrorC = 5 - c;
+      const mirrorX = OFFSET_X + mirrorC * (CELL_W + GAP);
+
+      // Interpolate
+      const x = origX + (mirrorX - origX) * progress;
+      const isMerged = progress > 0.85;
+
+      // determine if this should be highlighted (prime candidate)
+      const isCandidate = !(n % 2 === 0 || n % 3 === 0);
+
+      let colors;
+      if (isMerged && isCandidate) {
+        colors = { bg: '#FEF08A', text: '#92610A', border: '#F0B429' };
+      } else {
+        colors = cellColor(n, 'normal');
+      }
+
+      // Perspective scale (slight shrink as it folds over)
+      const scale = 1 - 0.08 * Math.sin(progress * Math.PI);
+      const scaledW = CELL_W * scale;
+      const scaledH = CELL_H * scale;
+      const dx = (CELL_W - scaledW) / 2;
+      const dy = (CELL_H - scaledH) / 2;
+
+      ctx.save();
+      ctx.globalAlpha = progress > 0.9 ? 0.85 : 1;
+      ctx.fillStyle = colors.bg;
+      ctx.strokeStyle = colors.border;
+      ctx.lineWidth = 1.5;
+      roundRect(ctx, x + dx, y + dy, scaledW, scaledH, 5);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = colors.text;
+      ctx.font = `500 ${Math.round(12 * scale)}px 'DM Mono', monospace`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(n, x + CELL_W / 2, y + CELL_H / 2);
+      ctx.restore();
+    }
+  }
+
+  // Draw fold line (visible as crease)
+  if (progress > 0.05 && progress < 0.95) {
+    ctx.save();
+    ctx.strokeStyle = '#D4920F';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 4]);
+    ctx.globalAlpha = 1 - Math.abs(progress - 0.5) * 2;
+    ctx.beginPath();
+    ctx.moveTo(foldX, OFFSET_Y - 10);
+    ctx.lineTo(foldX, OFFSET_Y + FOLD_ROWS * (CELL_H + GAP));
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Labels
+  ctx.fillStyle = '#8a7e6e';
+  ctx.font = `11px 'DM Mono', monospace`;
+  ctx.textAlign = 'center';
+  for (let c = 0; c < FOLD_COLS; c++) {
+    const x = OFFSET_X + c * (CELL_W + GAP) + CELL_W / 2;
+    ctx.fillText(`col ${c + 1}`, x, OFFSET_Y - 12);
+  }
+
+  ctx.restore();
+
+  // Annotation if folded
+  if (progress > 0.92) {
+    ctx.save();
+    ctx.fillStyle = '#1a1410';
+    ctx.font = `italic 13px 'Lora', serif`;
+    ctx.textAlign = 'left';
+    ctx.fillText('✓ Gold columns overlap perfectly', OFFSET_X, OFFSET_Y + FOLD_ROWS * (CELL_H + GAP) + 28);
+    ctx.restore();
+  }
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+drawFold(0);
+
+function animateFold() {
+  if (foldRAF) cancelAnimationFrame(foldRAF);
+  const start = performance.now();
+  const duration = 1600;
+
+  function frame(now) {
+    const t = Math.min((now - start) / duration, 1);
+    // ease in-out cubic
+    const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    foldProgress = ease;
+    drawFold(foldProgress);
+    if (t < 1) foldRAF = requestAnimationFrame(frame);
+  }
+  foldRAF = requestAnimationFrame(frame);
+}
+
+function resetFold() {
+  if (foldRAF) cancelAnimationFrame(foldRAF);
+  foldProgress = 0;
+  drawFold(0);
+}
+
+// ══════════════════════════════════
+// ACT II-B — PRIMORIAL SLIDER
+// ══════════════════════════════════
+const PRIMORIALS = [
+  { label: 'mod 6 (2×3)',     mod: 6,   primes: [2,3],     phi: 2 },
+  { label: 'mod 30 (2×3×5)',  mod: 30,  primes: [2,3,5],   phi: 8 },
+  { label: 'mod 210 (×7)',    mod: 210, primes: [2,3,5,7],  phi: 48 },
+  { label: 'mod 2310 (×11)',  mod: 2310,primes: [2,3,5,7,11],phi: 480 },
+];
+
+function isCandidateForMod(n, ps) {
+  for (const p of ps) if (n % p === 0 && n !== p) return false;
+  return true;
+}
+
+function updatePrimorial(val) {
+  const idx = parseInt(val);
+  const P = PRIMORIALS[idx];
+  document.getElementById('primorial-label').textContent = P.label;
+  document.getElementById('stat-modulus').textContent = P.mod;
+  document.getElementById('stat-candidates').textContent = P.phi;
+  document.getElementById('stat-folded').textContent = P.phi / 2;
+  const density = ((P.phi / P.mod) * 100).toFixed(1);
+  document.getElementById('stat-density').textContent = density + '%';
+
+  const captions = [
+    'Mod 6 = 2×3. Two prime candidates per row, folding into 1 column.',
+    'Mod 30 = 2×3×5. Eight candidates per cycle — fold gives 4 distinct columns.',
+    'Mod 210 = 2×3×5×7. Forty-eight candidates — fold reveals 24 columns.',
+    'Mod 2310 = 2×3×5×7×11. 480 candidates per cycle — fold gives 240 columns. The sieve keeps thinning.'
+  ];
+  document.getElementById('primorial-caption').innerHTML = captions[idx];
+
+  buildPrimorialGrid(P, idx);
+}
+
+function buildPrimorialGrid(P, idx) {
+  const wrap = document.getElementById('primorial-grid-wrap');
+  wrap.innerHTML = '';
+
+  if (idx >= 2) {
+    // Too large to show full grid; show a compact residue view
+    const cols = idx === 2 ? 30 : 30;
+    const maxN = P.mod;
+    const rowCount = 1;
+
+    const labelRow = document.createElement('div');
+    labelRow.className = 'grid-label-row';
+    labelRow.style.paddingLeft = '0';
+    labelRow.style.flexWrap = 'wrap';
+    wrap.appendChild(labelRow);
+
+    const gridRow = document.createElement('div');
+    gridRow.className = 'grid-row';
+    gridRow.style.flexWrap = 'wrap';
+    gridRow.style.gap = '3px';
+
+    for (let n = 1; n <= Math.min(maxN, 60); n++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.style.width = '28px';
+      cell.style.height = '28px';
+      cell.style.fontSize = '0.6rem';
+      cell.textContent = n;
+      const isC = isCandidateForMod(n, P.primes);
+      cell.classList.add(isC ? 'candidate' : 'eliminated');
+      gridRow.appendChild(cell);
+    }
+    const more = document.createElement('div');
+    more.style.fontFamily = "'DM Mono', monospace";
+    more.style.fontSize = '0.72rem';
+    more.style.color = 'var(--ink-light)';
+    more.style.padding = '8px';
+    more.textContent = `… (showing first 60 of ${P.mod})`;
+    gridRow.appendChild(more);
+    wrap.appendChild(gridRow);
+    return;
+  }
+
+  // Full grid for mod 6 and mod 30
+  const cols = P.mod === 6 ? 6 : 10;
+  const rows = P.mod === 6 ? 6 : 3;
+
+  const labelRow = document.createElement('div');
+  labelRow.className = 'grid-label-row';
+  labelRow.style.paddingLeft = '36px';
+  for (let c = 1; c <= cols; c++) {
+    const lbl = document.createElement('div');
+    lbl.className = 'col-label';
+    lbl.textContent = c;
+    labelRow.appendChild(lbl);
+  }
+  wrap.appendChild(labelRow);
+
+  for (let r = 0; r < rows; r++) {
+    const row = document.createElement('div');
+    row.className = 'grid-row';
+    const rl = document.createElement('div');
+    rl.className = 'row-label';
+    rl.textContent = r === 0 ? '' : `r${r}`;
+    row.appendChild(rl);
+
+    for (let c = 1; c <= cols; c++) {
+      const n = r * cols + c;
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.textContent = n;
+      const isC = isCandidateForMod(n, P.primes);
+      cell.classList.add(isC ? 'candidate' : 'eliminated');
+      row.appendChild(cell);
+    }
+    wrap.appendChild(row);
+  }
+}
+
+updatePrimorial(0);
+
+// ══════════════════════════════════
+// ACT III — PRIME LAYERING
+// ══════════════════════════════════
+let act3PrimesVisible = false;
+
+function buildAct3Grid(showPrimes) {
+  const wrap = document.getElementById('grid-act3');
+  wrap.innerHTML = '';
+  wrap.style.maxWidth = '340px';
+
+  const labelRow = document.createElement('div');
+  labelRow.className = 'grid-label-row';
+  for (let c = 1; c <= 6; c++) {
+    const lbl = document.createElement('div');
+    lbl.className = 'col-label';
+    lbl.textContent = c;
+    labelRow.appendChild(lbl);
+  }
+  wrap.appendChild(labelRow);
+
+  for (let r = 0; r < 8; r++) {
+    const row = document.createElement('div');
+    row.className = 'grid-row';
+    const rl = document.createElement('div');
+    rl.className = 'row-label';
+    rl.textContent = r === 0 ? '' : `r${r}`;
+    row.appendChild(rl);
+
+    for (let c = 1; c <= 6; c++) {
+      const n = r * 6 + c;
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.textContent = n;
+
+      const isElim = (n % 2 === 0 || n % 3 === 0) && n > 3;
+      const isSmallPrime = (n === 2 || n === 3);
+      const isBigPrime = isPrime(n) && n > 3;
+      const isCandidate = isCandidateMod6(n) && !isBigPrime;
+
+      if (isSmallPrime) {
+        cell.classList.add('prime');
+      } else if (isElim) {
+        cell.classList.add('eliminated');
+      } else if (showPrimes && isBigPrime) {
+        cell.classList.add('prime');
+      } else if (isCandidate) {
+        cell.classList.add('composite-candidate');
+      } else {
+        cell.classList.add('plain');
+      }
+
+      row.appendChild(cell);
+    }
+    wrap.appendChild(row);
+  }
+}
+
+function showPrimesAct3(show) {
+  act3PrimesVisible = show;
+  buildAct3Grid(show);
+}
+
+buildAct3Grid(false);
+</script>
+</body>
+</html>
