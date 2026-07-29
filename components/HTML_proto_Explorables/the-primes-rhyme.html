@@ -520,12 +520,12 @@
   <div class="prose reveal">
     <span class="act-label">Act II</span>
     <h2>Now fold it</h2>
-    <p>Here's Mohammed's key insight. The table has a line of symmetry — down the middle, between columns 3 and 4. If you fold the right half over the left, something remarkable happens.</p>
-    <p>The two gold columns — columns 1 and 5 — land <em>exactly on top of each other</em>.</p>
+    <p>Here's Mohammed's key insight — but to see it, the table has to be redrawn. Instead of rows running 1 to 6, centre each row on a <em>multiple of 6</em>. Now every row has a middle, and the gold candidates sit symmetrically on either side of it: one step below, one step above.</p>
+    <p>That is what <em>6k ± 1</em> means. Fold each row at its centre, and the two gold columns land <em>exactly on top of each other</em>.</p>
   </div>
 
   <div id="fold-canvas-wrap" class="reveal">
-    <canvas id="fold-canvas" width="660" height="320"></canvas>
+    <canvas id="fold-canvas" width="660" height="352"></canvas>
   </div>
 
   <div class="prose reveal" style="margin-top:24px;">
@@ -533,9 +533,9 @@
       <button class="btn" onclick="animateFold()">Fold it →</button>
       <button class="btn outline" onclick="resetFold()">Unfold</button>
     </div>
-    <p class="quiet">This isn't coincidence. Column 5 is the same as column −1 in mod-6. When you fold at the center, column 5 maps to column 1. The gold cells merge because they're the <em>same residue class</em>, mirrored.</p>
+    <p class="quiet">This isn't coincidence. The two candidates are 6k−1 and 6k+1 — the same distance from the centre, on opposite sides. Folding at the centre maps each onto the other, because they are the <em>same residue class</em>, mirrored. The sheet is drawn translucent as it lands, so you can see both layers at once.</p>
     <div class="callout">
-      <strong>The symmetry:</strong> The prime candidates in mod-6 come in pairs (1, 5) that are mirror images. Folding makes this literally visible — two columns become one.
+      <strong>The symmetry:</strong> The prime candidates in mod-6 come in mirror pairs, ±1 from every multiple of 6. Folding makes this literally visible — two columns become one, which is φ(6)/2 = 1.
     </div>
   </div>
 </section>
@@ -781,28 +781,57 @@ function resizeCanvas() {
   const wrap = document.getElementById('fold-canvas-wrap');
   const w = Math.min(660, wrap.clientWidth - 16);
   canvas.style.width = w + 'px';
-  canvas.style.height = (w * 320 / 660) + 'px';
+  canvas.style.height = (w * 352 / 660) + 'px';
 }
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 
-const FOLD_COLS = 6;
+// Each row is centred on a multiple of 6: offsets −3 … +3.
+// The candidates 6k−1 and 6k+1 are then mirror images across the centre,
+// so folding at the centre column lands one exactly on the other.
+const FOLD_COLS = 7;
 const FOLD_ROWS = 5;
-const FOLD_NUMS = Array.from({length: FOLD_ROWS * FOLD_COLS}, (_, i) => i + 1);
+const CENTRE_C  = 3;   // column index of offset 0
 
 const CELL_W = 80;
 const CELL_H = 48;
 const GAP = 6;
 const OFFSET_X = 30;
-const OFFSET_Y = 30;
+const OFFSET_Y = 34;
 
-function cellColor(n, mode) {
-  // mode: 'full' = show all, 'candidates' = show eliminated vs candidate
-  const isElim = (n % 2 === 0 || n % 3 === 0);
-  if (isElim) return { bg: '#EDE8DF', text: '#C4B8A4', border: '#D8D0C4' };
-  // candidate
-  if (mode === 'merged') return { bg: '#FEF08A', text: '#92610A', border: '#F0B429' };
+const MERGED_COLORS = { bg: '#FEF08A', text: '#92610A', border: '#F0B429' };
+
+// value sitting at (row, col)
+function foldValue(r, c) {
+  return 6 * (r + 1) + (c - CENTRE_C);
+}
+
+function isFoldCandidate(n) {
+  return !(n % 2 === 0 || n % 3 === 0);
+}
+
+function cellColor(n) {
+  if (!isFoldCandidate(n)) return { bg: '#EDE8DF', text: '#C4B8A4', border: '#D8D0C4' };
   return { bg: '#FDF3D0', text: '#D4920F', border: '#F5C842' };
+}
+
+function paintCell(n, x, y, colors, scale, alpha) {
+  const w = CELL_W * scale, h = CELL_H * scale;
+  const dx = (CELL_W - w) / 2, dy = (CELL_H - h) / 2;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = colors.bg;
+  ctx.strokeStyle = colors.border;
+  ctx.lineWidth = 1.5;
+  roundRect(ctx, x + dx, y + dy, w, h, 5);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = colors.text;
+  ctx.font = `500 ${Math.round(12 * scale)}px 'DM Mono', monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(n, x + CELL_W / 2, y + CELL_H / 2);
+  ctx.restore();
 }
 
 let foldProgress = 0;
@@ -812,120 +841,91 @@ function drawFold(progress) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.save();
 
-  const totalW = FOLD_COLS * (CELL_W + GAP) - GAP;
-  const foldX = OFFSET_X + 3 * (CELL_W + GAP) - GAP / 2; // between col 3 and 4
+  const merged = progress > 0.85;
+  const axisX  = OFFSET_X + CENTRE_C * (CELL_W + GAP) + CELL_W / 2;
+  const gridBottom = OFFSET_Y + FOLD_ROWS * (CELL_H + GAP) - GAP;
 
-  // Draw left half (cols 1-3): static
+  // ── Static half: offsets −3 … 0 ──
   for (let r = 0; r < FOLD_ROWS; r++) {
-    for (let c = 0; c < 3; c++) {
-      const n = r * FOLD_COLS + c + 1;
+    for (let c = 0; c <= CENTRE_C; c++) {
+      const n = foldValue(r, c);
       const x = OFFSET_X + c * (CELL_W + GAP);
       const y = OFFSET_Y + r * (CELL_H + GAP);
-      const colors = cellColor(n, 'normal');
-
-      ctx.fillStyle = colors.bg;
-      ctx.strokeStyle = colors.border;
-      ctx.lineWidth = 1.5;
-      roundRect(ctx, x, y, CELL_W, CELL_H, 5);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.fillStyle = colors.text;
-      ctx.font = `500 12px 'DM Mono', monospace`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(n, x + CELL_W / 2, y + CELL_H / 2);
+      const colors = (merged && isFoldCandidate(n)) ? MERGED_COLORS : cellColor(n);
+      paintCell(n, x, y, colors, 1, 1);
     }
   }
 
-  // Draw right half (cols 4-6): fold animation
-  // At progress=0: cols at their normal position
-  // At progress=1: cols 4,5,6 mirror onto cols 3,2,1
+  // ── Folding half: offsets +1 … +3 swing onto −1 … −3 ──
+  // Mirror across the centre column: c → 2*CENTRE_C − c
   for (let r = 0; r < FOLD_ROWS; r++) {
-    for (let c = 3; c < 6; c++) {
-      const n = r * FOLD_COLS + c + 1;
-      // Original position
-      const origX = OFFSET_X + c * (CELL_W + GAP);
+    for (let c = CENTRE_C + 1; c < FOLD_COLS; c++) {
+      const n = foldValue(r, c);
+      const origX   = OFFSET_X + c * (CELL_W + GAP);
+      const mirrorX = OFFSET_X + (2 * CENTRE_C - c) * (CELL_W + GAP);
+      const x = origX + (mirrorX - origX) * progress;
       const y = OFFSET_Y + r * (CELL_H + GAP);
 
-      // Mirror position: col 3 → col 2, col 4 → col 1, col 5 → col 0
-      // mirror col = (5 - c)
-      const mirrorC = 5 - c;
-      const mirrorX = OFFSET_X + mirrorC * (CELL_W + GAP);
-
-      // Interpolate
-      const x = origX + (mirrorX - origX) * progress;
-      const isMerged = progress > 0.85;
-
-      // determine if this should be highlighted (prime candidate)
-      const isCandidate = !(n % 2 === 0 || n % 3 === 0);
-
-      let colors;
-      if (isMerged && isCandidate) {
-        colors = { bg: '#FEF08A', text: '#92610A', border: '#F0B429' };
-      } else {
-        colors = cellColor(n, 'normal');
-      }
-
-      // Perspective scale (slight shrink as it folds over)
-      const scale = 1 - 0.08 * Math.sin(progress * Math.PI);
-      const scaledW = CELL_W * scale;
-      const scaledH = CELL_H * scale;
-      const dx = (CELL_W - scaledW) / 2;
-      const dy = (CELL_H - scaledH) / 2;
-
-      ctx.save();
-      ctx.globalAlpha = progress > 0.9 ? 0.85 : 1;
-      ctx.fillStyle = colors.bg;
-      ctx.strokeStyle = colors.border;
-      ctx.lineWidth = 1.5;
-      roundRect(ctx, x + dx, y + dy, scaledW, scaledH, 5);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.fillStyle = colors.text;
-      ctx.font = `500 ${Math.round(12 * scale)}px 'DM Mono', monospace`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(n, x + CELL_W / 2, y + CELL_H / 2);
-      ctx.restore();
+      const colors = (merged && isFoldCandidate(n)) ? MERGED_COLORS : cellColor(n);
+      const scale  = 1 - 0.08 * Math.sin(progress * Math.PI);
+      const alpha  = 1 - 0.45 * progress;   // transparent layers, as Mohammed described
+      paintCell(n, x, y, colors, scale, alpha);
     }
   }
 
-  // Draw fold line (visible as crease)
-  if (progress > 0.05 && progress < 0.95) {
-    ctx.save();
-    ctx.strokeStyle = '#D4920F';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([6, 4]);
-    ctx.globalAlpha = 1 - Math.abs(progress - 0.5) * 2;
-    ctx.beginPath();
-    ctx.moveTo(foldX, OFFSET_Y - 10);
-    ctx.lineTo(foldX, OFFSET_Y + FOLD_ROWS * (CELL_H + GAP));
-    ctx.stroke();
-    ctx.restore();
-  }
+  // ── Fold axis ──
+  ctx.save();
+  ctx.strokeStyle = '#D4920F';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 4]);
+  ctx.globalAlpha = 0.22 + 0.78 * Math.sin(progress * Math.PI);
+  ctx.beginPath();
+  ctx.moveTo(axisX, OFFSET_Y - 24);
+  ctx.lineTo(axisX, gridBottom + 8);
+  ctx.stroke();
+  ctx.restore();
 
-  // Labels
-  ctx.fillStyle = '#8a7e6e';
+  // ── Column labels ──
   ctx.font = `11px 'DM Mono', monospace`;
   ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
   for (let c = 0; c < FOLD_COLS; c++) {
+    const d = c - CENTRE_C;
     const x = OFFSET_X + c * (CELL_W + GAP) + CELL_W / 2;
-    ctx.fillText(`col ${c + 1}`, x, OFFSET_Y - 12);
+    let label, alpha;
+    if (d > 0) {
+      label = '+' + d;
+      alpha = 1 - progress;          // fades away as the column folds over
+    } else if (d < 0 && merged) {
+      label = '\u00B1' + (-d);      // −1 becomes ±1 once both layers sit there
+      alpha = 1;
+    } else {
+      label = d === 0 ? '0' : String(d);
+      alpha = 1;
+    }
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = d === 0 ? '#D4920F' : '#8a7e6e';
+    ctx.fillText(label, x, OFFSET_Y - 14);
   }
+  ctx.globalAlpha = 1;
 
   ctx.restore();
 
-  // Annotation if folded
-  if (progress > 0.92) {
-    ctx.save();
+  // ── Caption ──
+  ctx.save();
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'alphabetic';
+  ctx.font = `italic 13px 'Lora', serif`;
+  if (progress < 0.08) {
+    ctx.fillStyle = '#8a7e6e';
+    ctx.globalAlpha = 1 - progress / 0.08;
+    ctx.fillText('each row is centred on a multiple of 6', OFFSET_X, gridBottom + 32);
+  } else if (progress > 0.92) {
     ctx.fillStyle = '#1a1410';
-    ctx.font = `italic 13px 'Lora', serif`;
-    ctx.textAlign = 'left';
-    ctx.fillText('✓ Gold columns overlap perfectly', OFFSET_X, OFFSET_Y + FOLD_ROWS * (CELL_H + GAP) + 28);
-    ctx.restore();
+    ctx.globalAlpha = (progress - 0.92) / 0.08;
+    ctx.fillText('\u2713 6k\u22121 and 6k+1 land on the same column \u2014 \u03C6(6)/2 = 1', OFFSET_X, gridBottom + 32);
   }
+  ctx.restore();
 }
 
 function roundRect(ctx, x, y, w, h, r) {
