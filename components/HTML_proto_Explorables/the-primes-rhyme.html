@@ -336,8 +336,8 @@
     color: var(--ink-light);
   }
 
-  /* ── CANVAS for fold ── */
-  #fold-canvas-wrap {
+  /* ── CANVAS wrappers ── */
+  #fold-canvas-wrap, .canvas-wrap {
     width: 100%;
     max-width: 700px;
     margin: 0 auto;
@@ -345,11 +345,19 @@
     overflow: hidden;
   }
 
-  canvas#fold-canvas {
+  canvas#fold-canvas, .canvas-wrap canvas {
     display: block;
     margin: 0 auto;
     border-radius: 8px;
   }
+
+  .tally {
+    font-family: 'DM Mono', monospace;
+    font-size: 15px;
+    color: var(--ink-light);
+    margin: 14px 0 4px;
+  }
+  .tally b { color: #92610A; font-weight: 500; }
 
   /* ── LEGEND ── */
   .legend {
@@ -540,12 +548,60 @@
   </div>
 </section>
 
-<!-- ACT II-B: SCALE UP -->
+<!-- ACT III: THE FOLD AT SCALE -->
+<section class="section" id="act3a">
+  <div class="prose reveal">
+    <span class="act-label">Act III</span>
+    <h2>The same fold, one prime later</h2>
+    <p>Mod 6 used the primes 2 and 3. Bring in 5 and the unit becomes 30 — and the picture below is drawn exactly as before, each row centred on a multiple of 30, candidates marked in gold.</p>
+    <p>There are now eight of them per unit, and they are still perfectly mirrored: <em>30k ± 1, ± 7, ± 11, ± 13</em>. Fold at the centre and eight columns become four. That is φ(30)/2.</p>
+  </div>
+
+  <div class="canvas-wrap reveal">
+    <canvas id="fold30-canvas" width="660" height="196"></canvas>
+  </div>
+
+  <div class="prose reveal" style="margin-top:20px;">
+    <div style="margin: 12px 0 20px;">
+      <button class="btn" onclick="animateFold30()">Fold it →</button>
+      <button class="btn outline" onclick="resetFold30()">Unfold</button>
+    </div>
+    <p class="quiet">Only the gold cells are labelled; the rest of each row is already gone, struck by 2, 3 or 5. Notice 49, 77 and 91 sitting there in gold. They survived this sieve — they are not divisible by 2, 3 or 5 — but they are not prime either. Something still has to remove them.</p>
+  </div>
+</section>
+
+<!-- ACT III-B: THE REPETITION ENGINE -->
+<section class="section" id="act3b">
+  <div class="prose reveal">
+    <span class="act-label">Act III — continued</span>
+    <h2>What the next prime costs</h2>
+    <p>Here is the engine of the whole thing. To build the unit of 210, you take the eight survivors of mod 30 and repeat them seven times — once for each block of 30 that fits inside 210. Eight columns, seven copies: fifty-six candidates.</p>
+    <p>Then 7 arrives and strikes its own multiples. Watch <em>where</em> they fall.</p>
+  </div>
+
+  <div class="canvas-wrap reveal">
+    <canvas id="repeat-canvas" width="660" height="330"></canvas>
+  </div>
+
+  <div class="prose reveal" style="margin-top:20px;">
+    <div style="margin: 12px 0 20px;">
+      <button class="btn" onclick="animateRepeat()">Bring in 7 →</button>
+      <button class="btn outline" onclick="resetRepeat()">Reset</button>
+    </div>
+    <p class="tally" id="repeat-tally">8 columns × 7 copies = <b>56</b> candidates</p>
+    <p class="quiet">Exactly one cell in every column. Not two in one and none in another — one each, all eight, every time. The new prime takes its toll evenly across the residue classes, which is why no column ever gets starved of primes while its neighbours keep theirs.</p>
+    <div class="callout">
+      <strong>56 − 8 = 48.</strong> And φ(210) = 48. The count isn't a coincidence to be checked afterwards; it is what the repetition and the single strike leave behind.
+    </div>
+  </div>
+</section>
+
+<!-- ACT III-C: CODA — IT KEEPS GOING -->
 <section class="section" id="act2b">
   <div class="prose reveal">
-    <span class="act-label">Act II — continued</span>
-    <h2>What if we sieve more?</h2>
-    <p>Mod 6 uses the primes 2 and 3. What if we also eliminate multiples of 5? Then of 7? The table grows, but the same folding logic applies — and each time, the gold columns collapse perfectly.</p>
+    <span class="act-label">Act III — coda</span>
+    <h2>And it never stops</h2>
+    <p>Every new prime does the same thing: the previous unit is copied, and the newcomer strikes once per column. The candidates thin out, the units grow, and the mirror symmetry survives all of it.</p>
   </div>
 
   <div class="grid-container reveal">
@@ -584,14 +640,14 @@
   </div>
 
   <div class="prose reveal" style="margin-top:8px;">
-    <p class="quiet">Each time you multiply the modulus by the next prime, the prime candidates thin out — but they never stop having this folding symmetry. The "rhyme" persists at every scale.</p>
+    <p class="quiet">The density falls towards zero and the structure never loosens. At every level the candidates come in mirror pairs, and every level is built from the one before it by copy-and-strike. This is the sense in which the primes rhyme.</p>
   </div>
 </section>
 
 <!-- ACT III: PRIME LAYERING -->
-<section class="section" id="act3">
+<section class="section" id="act4">
   <div class="prose reveal">
-    <span class="act-label">Act III</span>
+    <span class="act-label">Act IV</span>
     <h2>Where primes actually land</h2>
     <p>Now let's drop the actual primes onto the mod-6 table. Every prime greater than 3 must live in a gold column — but do all gold cells contain primes?</p>
   </div>
@@ -965,6 +1021,216 @@ function resetFold() {
   foldProgress = 0;
   drawFold(0);
 }
+
+// ══════════════════════════════════
+// ACT III — THE FOLD AT MOD 30
+// ══════════════════════════════════
+// Same construction as Act II: rows centred on a multiple of the primorial,
+// candidates mirrored across the centre. Here the unit is 30 and the
+// candidates are 30k ± {1, 7, 11, 13} — eight per unit, folding to four.
+const R30_OFFSETS = [1, 7, 11, 13];
+const R30_HALF    = 15;                 // offsets run −15 … +15
+const R30_COLS    = 2 * R30_HALF + 1;
+const R30_CENTRES = [30, 60, 90];
+
+const R30_CW = 18, R30_CH = 32, R30_GAP = 2;
+const R30_OX = 21, R30_OY = 44;
+
+const c30 = document.getElementById('fold30-canvas');
+const x30 = c30.getContext('2d');
+
+function r30IsGold(d) { return R30_OFFSETS.indexOf(Math.abs(d)) !== -1; }
+
+function drawFold30(progress) {
+  x30.clearRect(0, 0, c30.width, c30.height);
+  const merged = progress > 0.85;
+  const axisX = R30_OX + R30_HALF * (R30_CW + R30_GAP) + R30_CW / 2;
+  const bottom = R30_OY + R30_CENTRES.length * (R30_CH + 6) - 6;
+
+  function cell(d, rowIdx, x, alpha, forceMerged) {
+    const gold = r30IsGold(d);
+    const y = R30_OY + rowIdx * (R30_CH + 6);
+    const col = gold
+      ? ((merged || forceMerged) ? { bg:'#FEF08A', text:'#92610A', border:'#F0B429' }
+                                 : { bg:'#FDF3D0', text:'#D4920F', border:'#F5C842' })
+      : { bg:'#EDE8DF', text:'#C4B8A4', border:'#D8D0C4' };
+    x30.save();
+    x30.globalAlpha = alpha;
+    x30.fillStyle = col.bg; x30.strokeStyle = col.border; x30.lineWidth = 1;
+    roundRect(x30, x, y, R30_CW, R30_CH, 3);
+    x30.fill(); x30.stroke();
+    if (gold) {
+      x30.fillStyle = col.text;
+      x30.font = `500 9px 'DM Mono', monospace`;
+      x30.textAlign = 'center'; x30.textBaseline = 'middle';
+      x30.fillText(R30_CENTRES[rowIdx] + d, x + R30_CW / 2, y + R30_CH / 2);
+    }
+    x30.restore();
+  }
+
+  // static half: −15 … 0
+  for (let r = 0; r < R30_CENTRES.length; r++)
+    for (let c = 0; c <= R30_HALF; c++)
+      cell(c - R30_HALF, r, R30_OX + c * (R30_CW + R30_GAP), 1, false);
+
+  // folding half: +1 … +15
+  for (let r = 0; r < R30_CENTRES.length; r++) {
+    for (let c = R30_HALF + 1; c < R30_COLS; c++) {
+      const d = c - R30_HALF;
+      const ox = R30_OX + c * (R30_CW + R30_GAP);
+      const mx = R30_OX + (2 * R30_HALF - c) * (R30_CW + R30_GAP);
+      cell(d, r, ox + (mx - ox) * progress, 1 - 0.45 * progress, false);
+    }
+  }
+
+  // axis
+  x30.save();
+  x30.strokeStyle = '#D4920F'; x30.lineWidth = 2; x30.setLineDash([5, 4]);
+  x30.globalAlpha = 0.22 + 0.78 * Math.sin(progress * Math.PI);
+  x30.beginPath(); x30.moveTo(axisX, R30_OY - 22); x30.lineTo(axisX, bottom + 8); x30.stroke();
+  x30.restore();
+
+  // labels
+  x30.save();
+  x30.font = `10px 'DM Mono', monospace`; x30.textAlign = 'center';
+  x30.fillStyle = '#D4920F';
+  x30.fillText('multiples of 30', axisX, R30_OY - 28);
+  x30.fillStyle = '#8a7e6e';
+  x30.globalAlpha = 1 - progress;
+  x30.fillText('+15', R30_OX + (R30_COLS - 1) * (R30_CW + R30_GAP) + R30_CW / 2, R30_OY - 10);
+  x30.globalAlpha = 1;
+  x30.fillText('\u221215', R30_OX + R30_CW / 2, R30_OY - 10);
+  x30.restore();
+
+  // caption
+  x30.save();
+  x30.textAlign = 'left'; x30.font = `italic 13px 'Lora', serif`;
+  if (progress > 0.92) {
+    x30.fillStyle = '#1a1410'; x30.globalAlpha = (progress - 0.92) / 0.08;
+    x30.fillText('\u2713 eight columns become four \u2014 \u03C6(30)/2 = 4', R30_OX, bottom + 30);
+  } else if (progress < 0.08) {
+    x30.fillStyle = '#8a7e6e'; x30.globalAlpha = 1 - progress / 0.08;
+    x30.fillText('eight gold candidates per unit, mirrored about the centre', R30_OX, bottom + 30);
+  }
+  x30.restore();
+}
+
+let fold30RAF = null;
+function animateFold30() {
+  if (fold30RAF) cancelAnimationFrame(fold30RAF);
+  const start = performance.now(), duration = 1600;
+  (function frame(now) {
+    const t = Math.min(((now || performance.now()) - start) / duration, 1);
+    const e = t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2;
+    drawFold30(e);
+    if (t < 1) fold30RAF = requestAnimationFrame(frame);
+  })(performance.now());
+}
+function resetFold30() {
+  if (fold30RAF) cancelAnimationFrame(fold30RAF);
+  drawFold30(0);
+}
+drawFold30(0);
+
+// ══════════════════════════════════
+// ACT III-B — THE REPETITION ENGINE
+// ══════════════════════════════════
+// The 8 survivors of mod 30, repeated 7 times to build the unit of 210.
+// 7 then strikes exactly one cell in each column: 56 − 8 = 48 = φ(210).
+const REP_RES  = [1, 7, 11, 13, 17, 19, 23, 29];
+const REP_COPIES = 7;
+const REP_CW = 66, REP_CH = 30, REP_GAP = 5;
+const REP_OX = 62, REP_OY = 52;
+
+const cRep = document.getElementById('repeat-canvas');
+const xRep = cRep.getContext('2d');
+
+let repProgress = 0;
+
+function drawRepeat(progress) {
+  xRep.clearRect(0, 0, cRep.width, cRep.height);
+  const bottom = REP_OY + REP_COPIES * (REP_CH + REP_GAP) - REP_GAP;
+
+  // column headers — the eight residue classes
+  xRep.save();
+  xRep.font = `500 10px 'DM Mono', monospace`;
+  xRep.textAlign = 'center'; xRep.fillStyle = '#8a7e6e';
+  for (let i = 0; i < REP_RES.length; i++)
+    xRep.fillText('30k+' + REP_RES[i], REP_OX + i * (REP_CW + REP_GAP) + REP_CW / 2, REP_OY - 12);
+  xRep.textAlign = 'right';
+  for (let k = 0; k < REP_COPIES; k++)
+    xRep.fillText('+' + (30 * k), REP_OX - 10, REP_OY + k * (REP_CH + REP_GAP) + REP_CH / 2 + 4);
+  xRep.restore();
+
+  let struck = 0;
+  for (let i = 0; i < REP_RES.length; i++) {
+    for (let k = 0; k < REP_COPIES; k++) {
+      const n = REP_RES[i] + 30 * k;
+      const isMultipleOf7 = (n % 7 === 0);
+      // strikes land column by column, left to right
+      const localT = Math.max(0, Math.min(1, progress * REP_RES.length - i));
+      const dead = isMultipleOf7 && localT > 0.5;
+      if (dead) struck++;
+
+      const x = REP_OX + i * (REP_CW + REP_GAP);
+      const y = REP_OY + k * (REP_CH + REP_GAP);
+      const col = dead
+        ? { bg:'#F6E3E0', text:'#B4776D', border:'#E4C4BD' }
+        : { bg:'#FDF3D0', text:'#D4920F', border:'#F5C842' };
+
+      xRep.save();
+      xRep.fillStyle = col.bg; xRep.strokeStyle = col.border; xRep.lineWidth = 1.2;
+      roundRect(xRep, x, y, REP_CW, REP_CH, 4);
+      xRep.fill(); xRep.stroke();
+      xRep.fillStyle = col.text;
+      xRep.font = `500 12px 'DM Mono', monospace`;
+      xRep.textAlign = 'center'; xRep.textBaseline = 'middle';
+      xRep.fillText(n, x + REP_CW / 2, y + REP_CH / 2);
+      if (dead) {
+        xRep.strokeStyle = '#C0857A'; xRep.lineWidth = 1.4;
+        xRep.beginPath();
+        xRep.moveTo(x + 9, y + REP_CH / 2);
+        xRep.lineTo(x + REP_CW - 9, y + REP_CH / 2);
+        xRep.stroke();
+      }
+      xRep.restore();
+    }
+  }
+
+  const tally = document.getElementById('repeat-tally');
+  if (tally) {
+    tally.innerHTML = struck === 0
+      ? '8 columns \u00D7 7 copies = <b>56</b> candidates'
+      : '56 \u2212 ' + struck + ' struck by 7 = <b>' + (56 - struck) + '</b> candidates'
+        + (struck === 8 ? '  \u2014 and \u03C6(210) = 48' : '');
+  }
+
+  if (progress > 0.98) {
+    xRep.save();
+    xRep.textAlign = 'left'; xRep.font = `italic 13px 'Lora', serif`;
+    xRep.fillStyle = '#1a1410';
+    xRep.fillText('\u2713 one strike per column \u2014 never two, never none', REP_OX, bottom + 26);
+    xRep.restore();
+  }
+}
+
+let repRAF = null;
+function animateRepeat() {
+  if (repRAF) cancelAnimationFrame(repRAF);
+  const start = performance.now(), duration = 2600;
+  (function frame(now) {
+    const t = Math.min(((now || performance.now()) - start) / duration, 1);
+    repProgress = t;
+    drawRepeat(t);
+    if (t < 1) repRAF = requestAnimationFrame(frame);
+  })(performance.now());
+}
+function resetRepeat() {
+  if (repRAF) cancelAnimationFrame(repRAF);
+  repProgress = 0;
+  drawRepeat(0);
+}
+drawRepeat(0);
 
 // ══════════════════════════════════
 // ACT II-B — PRIMORIAL SLIDER
